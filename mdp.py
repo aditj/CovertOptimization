@@ -1,4 +1,6 @@
 import numpy as np
+### np print options
+np.set_printoptions(precision=1)
 G = 5 ### number of gradients states
 M = 40 ### queue size
 X = G*M
@@ -38,20 +40,25 @@ for u in range(U):
                 elif m_prime == m and g_prime == g and m>0:
                     P[u][i][j] = (1-succ_prob[incentive])
 def cost_gradientstate(g):
-    return (1+g)**2 
+    return (1+g)**2
 def cost_queuestate(m):
-    return (1+m)             
+    return (1+m)**2       
 def return_cost(x,u,In,currentest):
     querytype = u//I
     incentive = u%I
     m = x%M
     g = x//M
-    constant = cost_gradientstate(g)*cost_queuestate(m)
-    cost = 1
+    constant = cost_gradientstate(g)/cost_queuestate(m)
     if querytype == 0:
-        cost = 1/constant*incentive*np.log(In/(In+incentive+1))    
+        
+        cost = incentive*np.log(In/(In+incentive+1))/constant   
+        if cost>0:
+            print("Cost is positive!") 
     else:
-        cost = constant*incentive*np.log((In+(incentive+1)/currentest)/(In+incentive+1))
+        
+        cost = incentive*np.log((In+(incentive+1)/currentest)/(In+incentive+1))/constant
+        if cost<0:
+            print("Cost is negative!")
     return cost
 def return_terminalcost(x):
     m = x%M
@@ -59,9 +66,9 @@ def return_terminalcost(x):
     return cost_queuestate(m)
 def update_estimate(currentest,u,In):
     querytype = u//I
-    incentive = u%I
+    incentive = u%I if querytype == 1 else (I-u)
     if querytype == 0:
-        currentest = currentest/(In + incentive+1)
+        currentest = currentest*In/(In + incentive+1)
     else:
         currentest = (currentest*In + incentive+1)/(In+incentive+1)
     return currentest
@@ -100,12 +107,14 @@ def sigmoid_policy(x,thresholds,tau = 1):
         action += 1/(1+ np.exp(-(m-thresholds[g,u])/tau))
     action = min(max(action,0),U-1)
     return action
-n_iter = 1000
+def clip_parameters(parameters):
+    return np.clip(parameters,0,M-1)
+n_iter = 400
 parameters = np.ones((n_iter,G,U))*10
 costs = np.zeros(n_iter)
-delta =0.1
-step_size = 0.01
-tau = 0.3
+delta = 1
+step_size = 0.001
+tau = 0.5
 import tqdm
 RUN_EXP = 1
 if RUN_EXP:
@@ -120,20 +129,21 @@ if RUN_EXP:
         parameters[i+1] = parameters[i] - step_size*gradient*parameters_to_optimize
         costs[i] = simulatemdp(policy= lambda x: sigmoid_policy(x,parameters[i],tau))
         tau = tau*0.9999
-        step_size = step_size * 0.9999
+        parameters = clip_parameters(parameters)
         print('parameters: ',parameters[i])
+
     np.save('./mdp_parameters.npy',parameters)
     np.save('./costs.npy',costs)
 parameters = np.load('./mdp_parameters.npy')
 costs = np.load('./costs.npy')
 import matplotlib.pyplot as plt
 plt.plot(costs)
-plt.savefig('costs.png')
-
-plt.plot(parameters[0][0])
-plt.plot(parameters[-1][0])
+plt.savefig('plots/costs.png')
+plt.close()
+plt.plot(parameters[:,0,0])
+plt.plot(parameters[:,-1,0])
 print(parameters[-1])
-plt.savefig('parameters.png')
+plt.savefig('plots/parameters.png')
 ### Stochastic approximation for finding the optimal policy with threshold structure
 
 
