@@ -5,12 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tqdm as tqdm
 N_MC = 100
-N_rounds  = 100 
+N_rounds  = 1000
 
 I = 5
 A = 2
 U = I*A
-M = 60
+M = 600
 G=5
 succ_prob = [0.2,0.4,0.6,0.8,1]
 P_G = [[0.4,0.3,0.1,0.1,0.1],
@@ -31,7 +31,7 @@ def sigmoid_policy(x,thresholds,tau = 0.01):
 
 def update_estimate(currentest,u,In):
     querytype = u//I
-    incentive = u%I if querytype == 1 else (I-u)
+    incentive = u%I if querytype == 1 else (I-1-u)
     if querytype == 0:
         currentest_eav = currentest*In/(In + incentive+1)
     else:
@@ -67,25 +67,26 @@ eavesdropper_estimates = np.zeros((N_MC, len(policies), N_rounds))
 learner_states = np.ones((N_MC, len(policies), N_rounds))*(M-1)
 RUN_EXP = True
 if RUN_EXP: 
-    for mc in range(N_MC):
+    for mc in tqdm.tqdm(range(N_MC)):
         for policy_idx,policy in enumerate(policies):
             learner_state = M-1
-            gradient_state = 0
+            gradient_state = 4
             eavesdropper_estimate = 0.5
             In = 0
             for round_ in range(N_rounds):
-                
                 state = M*gradient_state + learner_state 
                 action = policy(state)
                 if learner_state == 0:
-                    action = I-1
-                incentive = action%I
+                    action = 0
                 type_query = action//I
+                incentive = action%I if type_query == 1 else (I-1-action)
                 eavesdropper_estimate = update_estimate(eavesdropper_estimate,action,In)
-                print('eavesdropper_estimate: ',eavesdropper_estimate,"action",action,"incentive",incentive,"type_query",type_query,"In",In)
+                # print('eavesdropper_estimate: ',eavesdropper_estimate,"action",action,"incentive",incentive,"type_query",type_query,"In",In)
                 eavesdropper_estimates[mc,policy_idx, round_] = eavesdropper_estimate
                 In = In + incentive + 1
-        
+                if type_query == 0:
+                    if np.random.rand()<0:
+                        type_query = 1
                 if type_query == 0:
                     continue
                 else:

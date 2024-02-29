@@ -2,9 +2,9 @@ import numpy as np
 ### np print options
 np.set_printoptions(precision=1)
 G = 5 ### number of gradients states
-M = 40 ### queue size
+M = 600 ### queue size
 X = G*M
-N = 100 ### number of queries 
+N = 1000 ### number of queries 
 I = 5 ### Incentive
 A = 2 ### Learn or Obfuscate
 U = I*A ### total number of actions
@@ -45,7 +45,7 @@ def cost_queuestate(m):
     return (1+m)**2       
 def return_cost(x,u,In,currentest):
     querytype = u//I
-    incentive = u%I
+    incentive = u%I if querytype == 1 else (I-u)-1
     m = x%M
     g = x//M
     constant = cost_gradientstate(g)/cost_queuestate(m)
@@ -59,14 +59,14 @@ def return_cost(x,u,In,currentest):
         cost = incentive*np.log((In+(incentive+1)/currentest)/(In+incentive+1))/constant
         if cost<0:
             print("Cost is negative!")
-    return cost
+    return cost*2
 def return_terminalcost(x):
     m = x%M
     g = x//M
-    return cost_queuestate(m)
+    return cost_queuestate(m)*5
 def update_estimate(currentest,u,In):
     querytype = u//I
-    incentive = u%I if querytype == 1 else (I-u)
+    incentive = u%I if querytype == 1 else (I-u)-1
     if querytype == 0:
         currentest = currentest*In/(In + incentive+1)
     else:
@@ -109,7 +109,7 @@ def sigmoid_policy(x,thresholds,tau = 1):
     return action
 def clip_parameters(parameters):
     return np.clip(parameters,0,M-1)
-n_iter = 400
+n_iter = 40
 parameters = np.ones((n_iter,G,U))*10
 costs = np.zeros(n_iter)
 delta = 1
