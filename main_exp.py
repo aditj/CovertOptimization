@@ -23,7 +23,7 @@ def update_estimate(currentest,u,In):
     querytype = u//I
     incentive = u%I
     if querytype == 0:
-        currentest = currentest/(In + incentive+1)
+        currentest = currentest*In/(In + incentive+1)
     else:
         currentest = (currentest*In + incentive+1)/(In+incentive+1)
     return currentest
