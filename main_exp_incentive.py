@@ -93,7 +93,7 @@ eavesdropper_estimates_actual = np.zeros((N_MC, len(policies), N_rounds))
 learner_states = np.ones((N_MC, len(policies), N_rounds))*(M-1)
 oracle_states = np.zeros((N_MC, len(policies), N_rounds))
 
-RUN_EXP = 1
+RUN_EXP = 0
 if RUN_EXP:
     for mc in tqdm.tqdm(range(N_MC)):
         for policy_idx,policy in enumerate(policies):
@@ -149,7 +149,7 @@ oracle_states = np.load('parameters/oracle_states.npy')
 
 
 print(successful_queries.sum(axis=2).mean(axis=0))
-print(n_comm.sum(axis=2).mean(axis=0))
+print(n_comm[:,:,-1].mean(axis=0))
 # print(gradient_states.mean(axis=0))
 
 n_comm = n_comm.mean(axis = 0)
