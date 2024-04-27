@@ -95,6 +95,7 @@ sa_parameters = np.array([
 sa_policy = lambda x: sigmoid_policy(x,sa_parameters,0.01)
 policies = [sa_policy,random_policy,greedy_policy]
 
+learner = Learner()
 
 n_comm = np.zeros((N_MC, len(policies), N_rounds))
 successful_queries = np.zeros((N_MC, len(policies), N_rounds))
@@ -135,6 +136,7 @@ if RUN_EXP:
                         learner_state = learner_state - 1
                         successful_queries[mc,policy_idx, round_] = 1
                         learner_states[mc,policy_idx,round_] = learner_state
+                        
 
                 eavesdropper_estimate = update_estimate(eavesdropper_estimate,action,In)
                 eavesdropper_estimates[mc,policy_idx, round_] = eavesdropper_estimate

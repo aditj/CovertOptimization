@@ -82,7 +82,7 @@ class Client():
         self.model.train()
         ## Adam with weight decay AdamW
         # optimizer = torch.optim.SGD(params =  self.model.parameters(), lr=self.learning_rate)
-        self.gradient_norm = 0
+
         optimizer = torch.optim.AdamW(params =  self.model.parameters(), lr=self.learning_rate)
         for epoch in range(self.epochs):
             ## compute number of batches
@@ -111,12 +111,10 @@ class Client():
                 optimizer.zero_grad()
                 loss.backward()
                 ### get gradient norm
-                for param in self.model.parameters():
-                    self.gradient_norm += torch.norm(param.grad.detatch().data)**2
-                self.gradient_norm = torch.sqrt(self.gradient_norm)
+
+               
                 optimizer.step()
             #print(f'Client: {self.cid}, Batch: {_}, Loss:  {loss.item()}')
-        return self.gradient_norm
     def evaluate(self,parameters,batch_size):
         self.set_parameters(parameters)
         self.model.eval()
