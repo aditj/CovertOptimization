@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-# from learner import Learner
+from learner import Learner
 import tqdm
 
 N_MC = 100
@@ -165,7 +165,6 @@ oracle_states = np.load('parameters/oracle_states.npy')
 
 print(successful_queries.sum(axis=2).mean(axis=0))
 print(n_comm[:,:,-1].mean(axis=0))
-# print(gradient_states.mean(axis=0))
 
 n_comm = n_comm.mean(axis = 0)
 successful_queries = successful_queries.mean(axis = 0)
