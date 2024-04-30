@@ -4,7 +4,7 @@ import torch
 # from learner import Learner
 import tqdm
 
-N_MC = 100
+N_MC = 1
 N_rounds  = 100 
 
 
@@ -14,29 +14,51 @@ U = I*A
 M = 50
 O = 3
 client_dataset_size = 800
-
+def seed_everything(seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+seed_everything(0)
 class Oracle():
     def __init__(self):
         self.O = 3
         self.I = 3
-        self.oracle_states_thresholds = [0,14,20]
-        self.n_clients = 33
-        self.participation_prob = [[0.9,0.1],[0.1,0.9]]
-        self.client_dataset_size = 800
-        self.data_thresholds = 8000
-        self.initial_probs = [[0.1,0.9],[0.5,0.5],[0.9,0.1]]
+        self.oracle_states_thresholds = [0,16,21]
+        self.n_clients = 35
+        self.participation_prob = [[0.8,0.2],[0.2,0.8]]
+        self.client_dataset_size = 600
+        self.data_thresholds = 4500
+        self.initial_probs = [[0.3,0.7],[0.5,0.5],[0.7,0.3]]
         self.initial_prob = self.initial_probs[np.random.choice([0,1,2])]
         self.participation_client  = np.random.choice([0,1],self.n_clients, p=self.initial_prob)
         self.n_participating_clients = sum(self.participation_client)
 
         self.update_oracle_state()
-    def train(self,incentive):
-        round_succ = self.sample_data(incentive)
-        
-        return round_succ
+    def initialize_clients(self):
+        self.clients = []
+        for client in range(self.n_clients):
+            self.clients.append(Client(client))
+
+       
+    def train(self,incentive,parameters):
+        incentive_map = [0.2,0.4,0.9]
+        evaluation = 0
+        data_available_for_sampling = incentive_map[int(incentive)]*self.client_dataset_size
+        self.total_data = np.random.uniform(data_available_for_sampling,data_available_for_sampling,self.n_participating_clients).sum()
+        round_succ = self.total_data > self.data_thresholds
+        if round_succ:
+            ### Train loop 
+            
+            for client in np.nonzero(self.participation_client)[0]:
+                self.clients[client].train(parameters,data_available_for_sampling)
+                evaluation += self.clients[client].evaluate(parameters,data_available_for_sampling)
+            evaluation = evaluation/self.n_participating_clients    
+            print(evaluation)
+        return round_succ,evaluation
 
     def reset_oracle(self,initial_prob=None):
-        self.initial_probs = [[0.1,0.9],[0.5,0.5],[0.9,0.1]]
+        self.initial_probs = [[0.3,0.7],[0.5,0.5],[0.7,0.3]]
 
         if initial_prob is not None:
             self.initial_prob = initial_prob
@@ -44,11 +66,7 @@ class Oracle():
             self.initial_prob = self.initial_probs[np.random.choice([0,1,2])]
         self.participation_client  = np.random.choice([0,1],self.n_clients, p=self.initial_prob)
         self.update_oracle_state()
-    def sample_data(self,incentive):
-        incentive_map = [0.1,0.4,0.7]
-        data_available_for_sampling = incentive_map[int(incentive)]*client_dataset_size
-        total_data = np.random.uniform(data_available_for_sampling,data_available_for_sampling,self.n_participating_clients).sum()
-        return total_data >  self.data_thresholds
+    
    
     def update_client_participation(self):
         for client in range(self.n_clients):
@@ -87,14 +105,30 @@ def update_estimate(currentest,u,In):
 random_policy = lambda x: np.random.randint(0,U)
 greedy_policy = lambda x: U-1
 sa_parameters = np.array([
-    [60,60,60,60,60,60],
-    [16,16,16,16,16,16],
-    [0,0,0,0,0,60]
+    [50,30,10,50,50,50],
+    [15,15,15,15,15,15],
+    [0,0,0,0,50,50]
+])
+sa_parameters_constant_incentivation = np.array([
+    [50,50,50,50,50,50],
+    [15,15,15,15,15,15],
+    [0,0,0,0,0,0]
 ])
 
 sa_policy = lambda x: sigmoid_policy(x,sa_parameters,0.01)
-policies = [sa_policy,random_policy,greedy_policy]
-
+sa_policy_constant_incentivation = lambda x: sigmoid_policy(x,sa_parameters_constant_incentivation,0.01)
+def plot_sigmoid_policy(sa_parameters = sa_parameters):
+    policy = np.zeros((M*O))
+    for m in range(M):
+        for o in range(O):
+            policy[o*M+m] = sigmoid_policy(m+M*o,sa_parameters)
+    plt.figure()
+    plt.plot(policy)
+    plt.xlabel('State')
+    plt.ylabel('Action')
+    plt.savefig('plots/sigmoid_policy.png')
+plot_sigmoid_policy(sa_parameters)
+policies = [sa_policy,random_policy,greedy_policy,sa_policy_constant_incentivation]
 
 n_comm = np.zeros((N_MC, len(policies), N_rounds))
 successful_queries = np.zeros((N_MC, len(policies), N_rounds))
@@ -102,7 +136,9 @@ eavesdropper_estimates = np.zeros((N_MC, len(policies), N_rounds))
 eavesdropper_estimates_actual = np.zeros((N_MC, len(policies), N_rounds))
 learner_states = np.ones((N_MC, len(policies), N_rounds))*(M-1)
 oracle_states = np.zeros((N_MC, len(policies), N_rounds))
-
+succ_rates = np.zeros((O,U))
+oracle_state_occurences = np.zeros((O,U))
+evaluation = np.zeros((N_MC, len(policies), N_rounds))
 RUN_EXP = 1
 if RUN_EXP:
     for mc in tqdm.tqdm(range(N_MC)):
@@ -119,23 +155,29 @@ if RUN_EXP:
                 action = policy(state) ## get action
                 incentive = action%I ## get incentive and type of query
                 type_query = action//I
-                
+                if type_query == 0:
+                    incentive = I - incentive - 1
+                    
+      
                 if learner_state == 0:
                     type_query = 0
                     incentive = I-1
                     action = type_query*I + incentive
                 
                 
-                
                 if type_query == 0:
                     learner_states[mc,policy_idx,round_] = learner_state
                 else:
-                    succ_round = oracle.train(incentive)
+                    succ_round,evaluation = oracle.train(incentive)
+                    succ_rates[int(oracle_state),int(action)] += succ_round
+                    oracle_state_occurences[int(oracle_state),int(action)] += 1
+
                     if succ_round:
                         learner_state = learner_state - 1
                         successful_queries[mc,policy_idx, round_] = 1
                         learner_states[mc,policy_idx,round_] = learner_state
-
+                        
+                evaluation[mc,policy_idx,round_] = evaluation
                 eavesdropper_estimate = update_estimate(eavesdropper_estimate,action,In)
                 eavesdropper_estimates[mc,policy_idx, round_] = eavesdropper_estimate
                 In = In + incentive + 1 ### Total Incentive update
@@ -145,16 +187,17 @@ if RUN_EXP:
 
                 oracle_states[mc,policy_idx,round_] = oracle_state ### oracle state store
                 n_comm[mc,policy_idx, round_] = In ### incentive
-                if round_%15 == 0:
-                    oracle.reset_oracle([0.1,0.9])
+                if round_%20 == 0:
+                    oracle.reset_oracle([0.3,0.7])
 
-                if round_%30 == 0:
-                    oracle.reset_oracle([0.9,0.1])
+                if round_%40 == 0:
+                    oracle.reset_oracle([0.7,0.3])
     np.save('parameters/n_comm.npy', n_comm)
     np.save('parameters/successful_queries.npy', successful_queries)
     np.save('parameters/eavesdropper_estimates.npy', eavesdropper_estimates)
     np.save('parameters/learner_state_final.npy', learner_states)
     np.save('parameters/oracle_states.npy', oracle_states)
+    np.save('parameters/evaluation.npy', evaluation)
 
 n_comm = np.load('parameters/n_comm.npy')
 successful_queries = np.load('parameters/successful_queries.npy')
@@ -162,6 +205,9 @@ eavesdropper_estimates = np.load('parameters/eavesdropper_estimates.npy')
 learner_state_final = np.load('parameters/learner_state_final.npy')
 oracle_states = np.load('parameters/oracle_states.npy')
 
+
+print(oracle_state_occurences.sum(axis=1))
+print(succ_rates/oracle_state_occurences)
 
 print(successful_queries.sum(axis=2).mean(axis=0))
 print(n_comm[:,:,-1].mean(axis=0))

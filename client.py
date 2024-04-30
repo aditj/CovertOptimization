@@ -77,9 +77,8 @@ class Client():
         self.train_loader = DataLoader(self.train_dataset, shuffle = True, batch_size=self.train_batch_size, num_workers=0)
         self.n_batch_per_client = len(self.train_loader)//self.train_batch_size
         self.valid_loader = DataLoader(self.valid_dataset, shuffle = True, batch_size=self.valid_batch_size, num_workers=0)
-    def train(self,parameters,n_batches_max,i):
+    def train(self,parameters,n_samples):
         self.set_parameters(parameters)
-        self.model.train()
         ## Adam with weight decay AdamW
         # optimizer = torch.optim.SGD(params =  self.model.parameters(), lr=self.learning_rate)
         self.gradient_norm = 0
@@ -87,17 +86,14 @@ class Client():
         for epoch in range(self.epochs):
             ## compute number of batches
             n_batches = len(self.train_loader)
-            n_batches_start = (n_batches_max*i) % n_batches
-            n_batches_end = (n_batches_max*(i+1)) % n_batches
-            if n_batches_end < n_batches_start:
-                n_batches_end = n_batches
+            n_batches_max = n_samples//self.train_batch_size
+            batch_indices = np.random.choice(n_batches,n_batches_max,replace=False)
             # take subset of train  loader from n_batches_start to n_batches_end                    
+            ## randomly sample n_batches_max batches
 
             for _,data in enumerate(self.train_loader,0):
-                if _ < n_batches_start:
+                if _ not in batch_indices:
                     continue
-                if _ > n_batches_end:
-                    break
                 ids = data['ids'].to(self.device,torch.long)
                 mask = data['mask'].to(self.device,torch.long)
                 token_type_ids = data['token_type_ids'].to(self.device,torch.long)
@@ -117,7 +113,7 @@ class Client():
                 optimizer.step()
             #print(f'Client: {self.cid}, Batch: {_}, Loss:  {loss.item()}')
         return self.gradient_norm
-    def evaluate(self,parameters,batch_size):
+    def evaluate(self,parameters):
         self.set_parameters(parameters)
         self.model.eval()
         fin_targets=[]
@@ -138,11 +134,10 @@ class Client():
         outputs = np.array(fin_outputs) >= 0.5
         fin_targets = np.array(fin_targets)
         ## create weights for samples with all 0 classes to avoid bias
-        f1_score = metrics.f1_score(fin_targets, outputs, average='weighted',zero_division=1)
-        accuracy = metrics.accuracy_score(fin_targets, outputs)
+       # f1_score = metrics.f1_score(fin_targets, outputs, average='weighted',zero_division=1)
+       # accuracy = metrics.accuracy_score(fin_targets, outputs)
         balanced_accuracy = metrics.balanced_accuracy_score(fin_targets, outputs, adjusted=True)       
-        print("Client: ",self.cid," Accuracy: ",accuracy)
-        return accuracy,f1_score,balanced_accuracy
+        return balanced_accuracy
     def get_parameters(self):
         return self.model.state_dict()
     def set_parameters(self,parameters_state_dict):
