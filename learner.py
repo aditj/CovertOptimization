@@ -40,13 +40,12 @@ class Learner():
         self.gradient_norm = 0
         ### Train the clients and aggregate the parameters
         for j in range(self.n_clients): # for each client
-            self.gradient_norm += self.clients[j].train(self.global_parameters,self.train_batch_size,round_idx) # train the client
+            self.clients[j].train(self.global_parameters,self.train_batch_size,round_idx) # train the client
             self.add_parameters(self.clients[j].get_parameters()) # add the parameters to the aggregated parameters
             evaluations = self.clients[j].evaluate(self.clients[j].get_parameters(),self.train_batch_size) 
             self.aggregated_loss += evaluations[0]
             self.aggregated_f1 += evaluations[1]
             self.aggregated_balanced_accuracy += evaluations[2]
-        self.gradient_norm = self.gradient_norm/self.n_clients
         self.divide_parameters(len(self.clients)) # divide the aggregated parameters by the number of clients
         self.aggregated_loss/=len(self.clients) 
         self.aggregated_f1/=len(self.clients)

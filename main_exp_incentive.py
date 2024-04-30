@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-# from learner import Learner
+from learner import Learner
 import tqdm
 
 N_MC = 1
@@ -177,7 +177,11 @@ if RUN_EXP:
                         successful_queries[mc,policy_idx, round_] = 1
                         learner_states[mc,policy_idx,round_] = learner_state
                         
+<<<<<<< HEAD
                 evaluation[mc,policy_idx,round_] = evaluation
+=======
+
+>>>>>>> 50c8562ff1c939fafc1effd90bf9ed3159a60512
                 eavesdropper_estimate = update_estimate(eavesdropper_estimate,action,In)
                 eavesdropper_estimates[mc,policy_idx, round_] = eavesdropper_estimate
                 In = In + incentive + 1 ### Total Incentive update
@@ -211,7 +215,6 @@ print(succ_rates/oracle_state_occurences)
 
 print(successful_queries.sum(axis=2).mean(axis=0))
 print(n_comm[:,:,-1].mean(axis=0))
-# print(gradient_states.mean(axis=0))
 
 n_comm = n_comm.mean(axis = 0)
 successful_queries = successful_queries.mean(axis = 0)
