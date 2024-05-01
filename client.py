@@ -8,6 +8,10 @@ from transformers import AlbertTokenizer, BertTokenizer
 import pandas as pd
 tokenizer = BertTokenizer.from_pretrained('google/bert_uncased_L-2_H-128_A-2', do_lower_case=True)
 from torch.utils.data import Dataset, DataLoader
+### suppress ptorch transformer warnings
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 
 
 class CustomDataset(Dataset):
@@ -86,7 +90,7 @@ class Client():
         for epoch in range(self.epochs):
             ## compute number of batches
             n_batches = len(self.train_loader)
-            n_batches_max = n_samples//self.train_batch_size
+            n_batches_max = int(n_samples//self.train_batch_size)
             batch_indices = np.random.choice(n_batches,n_batches_max,replace=False)
             # take subset of train  loader from n_batches_start to n_batches_end                    
             ## randomly sample n_batches_max batches
@@ -111,12 +115,7 @@ class Client():
                
                 optimizer.step()
             #print(f'Client: {self.cid}, Batch: {_}, Loss:  {loss.item()}')
-<<<<<<< HEAD
-        return self.gradient_norm
-    def evaluate(self,parameters):
-=======
     def evaluate(self,parameters,batch_size):
->>>>>>> 50c8562ff1c939fafc1effd90bf9ed3159a60512
         self.set_parameters(parameters)
         self.model.eval()
         fin_targets=[]

@@ -1,12 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-from learner import Learner
+from client import Client
 import tqdm
-
+from create_datasets import create_datasets_clients
+from nn import BERTClass
 N_MC = 1
 N_rounds  = 100 
-
+N_CLASSES = 1
 
 I = 3
 A = 2
@@ -33,12 +34,14 @@ class Oracle():
         self.initial_prob = self.initial_probs[np.random.choice([0,1,2])]
         self.participation_client  = np.random.choice([0,1],self.n_clients, p=self.initial_prob)
         self.n_participating_clients = sum(self.participation_client)
-
+        #create_datasets_clients(N_device=self.n_clients,fraction_of_data=1,batch_size = self.client_dataset_size)
+        self.agg_parameters = BERTClass(N_CLASSES).to("cuda").state_dict()
+        self.initialize_clients()
         self.update_oracle_state()
     def initialize_clients(self):
         self.clients = []
         for client in range(self.n_clients):
-            self.clients.append(Client(client))
+            self.clients.append(Client(client,BERTClass(N_CLASSES)))
 
        
     def train(self,incentive,parameters):
@@ -49,13 +52,26 @@ class Oracle():
         round_succ = self.total_data > self.data_thresholds
         if round_succ:
             ### Train loop 
-            
+            self.zero_aggregated_parameters()
             for client in np.nonzero(self.participation_client)[0]:
                 self.clients[client].train(parameters,data_available_for_sampling)
                 evaluation += self.clients[client].evaluate(parameters,data_available_for_sampling)
+                self.add_parameters(self.clients[client].get_parameters())
+
             evaluation = evaluation/self.n_participating_clients    
+            self.divide_parameters(self.n_participating_clients)
             print(evaluation)
         return round_succ,evaluation
+    def divide_parameters(self,n):
+        for layer in self.agg_parameters:
+            self.agg_parameters[layer] = self.agg_parameters[layer]/n
+        
+    def zero_aggregated_parameters(self):
+        for layer in self.agg_parameters:
+            self.agg_parameters[layer] = torch.zeros_like(self.agg_parameters[layer])
+    def add_parameters(self,parameters):
+        for layer in self.agg_parameters:
+            self.agg_parameters[layer] += parameters[layer]
 
     def reset_oracle(self,initial_prob=None):
         self.initial_probs = [[0.3,0.7],[0.5,0.5],[0.7,0.3]]
@@ -130,6 +146,9 @@ def plot_sigmoid_policy(sa_parameters = sa_parameters):
 plot_sigmoid_policy(sa_parameters)
 policies = [sa_policy,random_policy,greedy_policy,sa_policy_constant_incentivation]
 
+base_nn = BERTClass(N_CLASSES).to('cuda')
+learner_parameters = base_nn.state_dict()
+
 n_comm = np.zeros((N_MC, len(policies), N_rounds))
 successful_queries = np.zeros((N_MC, len(policies), N_rounds))
 eavesdropper_estimates = np.zeros((N_MC, len(policies), N_rounds))
@@ -138,7 +157,7 @@ learner_states = np.ones((N_MC, len(policies), N_rounds))*(M-1)
 oracle_states = np.zeros((N_MC, len(policies), N_rounds))
 succ_rates = np.zeros((O,U))
 oracle_state_occurences = np.zeros((O,U))
-evaluation = np.zeros((N_MC, len(policies), N_rounds))
+evaluations = np.zeros((N_MC, len(policies), N_rounds))
 RUN_EXP = 1
 if RUN_EXP:
     for mc in tqdm.tqdm(range(N_MC)):
@@ -168,7 +187,8 @@ if RUN_EXP:
                 if type_query == 0:
                     learner_states[mc,policy_idx,round_] = learner_state
                 else:
-                    succ_round,evaluation = oracle.train(incentive)
+                    succ_round,evaluation = oracle.train(incentive,learner_parameters)
+                    learner_parameters = oracle.agg_parameters
                     succ_rates[int(oracle_state),int(action)] += succ_round
                     oracle_state_occurences[int(oracle_state),int(action)] += 1
 
@@ -177,11 +197,7 @@ if RUN_EXP:
                         successful_queries[mc,policy_idx, round_] = 1
                         learner_states[mc,policy_idx,round_] = learner_state
                         
-<<<<<<< HEAD
-                evaluation[mc,policy_idx,round_] = evaluation
-=======
-
->>>>>>> 50c8562ff1c939fafc1effd90bf9ed3159a60512
+                evaluations[mc,policy_idx,round_] = evaluation
                 eavesdropper_estimate = update_estimate(eavesdropper_estimate,action,In)
                 eavesdropper_estimates[mc,policy_idx, round_] = eavesdropper_estimate
                 In = In + incentive + 1 ### Total Incentive update

@@ -130,7 +130,7 @@ def correct_spelling(x, dic):
     return x
 print("Cleaning Spelling...\n")
 df['treated_comment'] = df['treated_comment'].apply(lambda x: correct_spelling(x, mispell_dict))
-df['comment'] = preprocess(df['treated_comment'])
+df['treated_comment'] = preprocess(df['treated_comment'])
 print("Saving the data...\n")
 df.rename(columns={'toxic': 'target'}, inplace=True)
-df[['comment','target']].to_csv('./data/df_treated_comment.csv',index=False)
+df[['treated_comment','target']].to_csv('./data/df_treated_comment.csv',index=False)

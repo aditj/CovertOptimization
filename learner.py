@@ -1,6 +1,6 @@
 import torch
 from client import Client
-from models import BERTClass,CNNBERTClass
+from nn import BERTClass,CNNBERTClass
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -54,9 +54,6 @@ class Learner():
         ### write in self.file
     
    
-    def get_gradient_state(self):
-        gradient_thresholds = [0,0.1,0.2,0.3,0.4]
-        return np.digitize(self.gradient_norm,gradient_thresholds)
     def get_parameters(self):
         return self.global_parameters
     def add_parameters(self,parameters):
