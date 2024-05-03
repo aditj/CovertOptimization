@@ -6,7 +6,8 @@ import tqdm
 from create_datasets import create_datasets_clients
 from nn import BERTClass
 from oracle import Oracle
-N_MC = 1
+from utils.funcs import sigmoid_policy,update_estimate
+N_MC = 5
 N_rounds  = 100 
 N_CLASSES = 1
 
@@ -15,45 +16,13 @@ A = 2
 U = I*A
 M = 50
 O = 3
-def seed_everything(seed):
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
 
-def update_estimate(currentest,u,In):
-    querytype = u//I
-    incentive = u%I
-    if querytype == 0:
-        currentest = currentest*In/(In + incentive+1)
-    else:
-        currentest = (currentest*In + incentive+1)/(In+incentive+1)
-    return currentest
-
-def sigmoid_policy(x,thresholds,tau = 0.01):
-    m = x%M
-    o = x//M
-    action = 0
-  
-    for u in range(U):
-        action += 1/(1+ np.exp(-(m-thresholds[o,u])/tau))
-    action = min(max(action,0),U-1)
-    return action
-
-def update_estimate(currentest,u,In):
-    querytype = u//I
-    incentive = u%I if querytype == 1 else (I-1-u)
-    if querytype == 0:
-        currentest_eav = currentest*In/(In + incentive+1)
-    else:
-        currentest_eav = (currentest*In + incentive+1)/(In+incentive+1)
-    return currentest_eav
 random_policy = lambda x: np.random.randint(0,U)
 greedy_policy = lambda x: U-1
 sa_parameters = np.array([
-    [50,30,10,50,50,50],
+    [50,50,30,20,50,50],
     [15,15,15,15,15,15],
-    [0,0,0,0,50,50]
+    [0,0,0,0,40,50]
 ])
 sa_parameters_constant_incentivation = np.array([
     [50,50,50,50,50,50],
@@ -75,7 +44,7 @@ def plot_sigmoid_policy(sa_parameters = sa_parameters):
     plt.savefig('plots/sigmoid_policy.png')
 plot_sigmoid_policy(sa_parameters)
 policies = [sa_policy,random_policy,greedy_policy,sa_policy_constant_incentivation]
-policies = [greedy_policy,sa_policy]
+policies = [sa_policy_constant_incentivation]
 base_nn = BERTClass(N_CLASSES).to('mps')
 
 n_comm = np.zeros((N_MC, len(policies), N_rounds))
@@ -89,14 +58,14 @@ oracle_state_occurences = np.zeros((O,U))
 evaluations = np.zeros((N_MC, len(policies), N_rounds))
 eavesdropper_evaluations = np.zeros((N_MC, len(policies), N_rounds))
 eavesdropper_client = Client(0,BERTClass(N_CLASSES))
-RUN_EXP = 0
+RUN_EXP = 1
 if RUN_EXP:
     for mc in tqdm.tqdm(range(N_MC)):
         
         for policy_idx,policy in enumerate(policies):
             seed_everything(mc)
             learner_parameters = base_nn.state_dict()
-            eavesdropper_estimates = base_nn.state_dict()
+            eavesdropper_parameters = base_nn.state_dict()
             learner_state = M-1
             eavesdropper_estimate = 0.5
             oracle = Oracle()
@@ -160,18 +129,21 @@ if RUN_EXP:
     np.save('parameters/eavesdropper_estimates.npy', eavesdropper_estimates)
     np.save('parameters/learner_state_final.npy', learner_states)
     np.save('parameters/oracle_states.npy', oracle_states)
-    np.save('parameters/evaluation.npy', evaluations)
+    np.save('parameters/evaluation_extra.npy', evaluations)
+    np.save('parameters/eavesdropper_evaluations.npy', eavesdropper_evaluations)
 
+eavesdropper_evaluation = np.load('parameters/eavesdropper_evaluations.npy')
 n_comm = np.load('./parameters/n_comm.npy')
 successful_queries = np.load('./parameters/successful_queries.npy')
-#eavesdropper_estimates = np.load('./parameters/eavesdropper_estimates.npy')
+eavesdropper_estimates = np.load('parameters/eavesdropper_estimates.npy',allow_pickle=True)
 learner_state_final = np.load('./parameters/learner_state_final.npy')
 oracle_states = np.load('./parameters/oracle_states.npy')
 evaluations = np.load('./parameters/evaluation.npy')
 print(evaluations)
+print(eavesdropper_estimates)
+
 print(oracle_state_occurences.sum(axis=1))
 print(succ_rates/oracle_state_occurences)
-
 print(successful_queries.sum(axis=2).mean(axis=0))
 print(n_comm[:,:,-1].mean(axis=0))
 

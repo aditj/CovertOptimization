@@ -1,4 +1,10 @@
 
+import numpy as np
+from nn import BERTClass
+from client import Client
+from create_datasets import create_datasets_clients
+N_CLASSES = 1
+import torch
 class Oracle():
     def __init__(self):
         self.O = 3
@@ -28,6 +34,7 @@ class Oracle():
         data_available_for_sampling = incentive_map[int(incentive)]*self.client_dataset_size
         self.total_data = np.random.uniform(data_available_for_sampling,data_available_for_sampling,self.n_participating_clients).sum()
         round_succ = self.total_data > self.data_thresholds
+        
         if round_succ:
             ### Train loop 
             self.zero_aggregated_parameters()
