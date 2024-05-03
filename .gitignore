@@ -1,1 +1,6 @@
 data/*
+*/__pycache__/*
+./data/*
+__pycache__/*
+./data/*
+./data/*.csv
