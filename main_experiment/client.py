@@ -90,6 +90,7 @@ class Client():
             ## compute number of batches
             n_batches = len(self.train_loader)
             n_batches_max = int(n_samples//self.train_batch_size)
+            print(n_batches,n_batches_max)
             batch_indices = np.random.choice(n_batches,n_batches_max,replace=False)
             # take subset of train  loader from n_batches_start to n_batches_end                    
             ## randomly sample n_batches_max batches

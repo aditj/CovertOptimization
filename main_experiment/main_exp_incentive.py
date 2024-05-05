@@ -1,3 +1,9 @@
+#### File: main_exp_incentive.py
+#### Main Experiment to compare the performance of different policies in the presence of an eavesdropper
+####  
+####
+
+#### Importing Libraries
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -6,13 +12,15 @@ import tqdm
 from create_datasets import create_datasets_clients
 from nn import BERTClass
 from oracle import Oracle
-from utils.funcs import sigmoid_policy,update_estimate
-N_MC = 5
-N_rounds  = 100 
-N_CLASSES = 1
+from utils.funcs import sigmoid_policy,update_estimate,seed_everything
 
-I = 3
-A = 2
+#### Setting up the experiment
+N_MC = 100 ## Number of Monte Carlo simulations
+N_rounds  = 100 ## Number of rounds
+N_CLASSES = 1 ## Number of classes
+
+I = 3 ## Number of incentives
+A = 2 ## Number of actions
 U = I*A
 M = 50
 O = 3
@@ -43,8 +51,9 @@ def plot_sigmoid_policy(sa_parameters = sa_parameters):
     plt.ylabel('Action')
     plt.savefig('plots/sigmoid_policy.png')
 plot_sigmoid_policy(sa_parameters)
+
 policies = [sa_policy,random_policy,greedy_policy,sa_policy_constant_incentivation]
-policies = [sa_policy_constant_incentivation]
+#ßpolicies = [sa_policy,greedy_policy]
 base_nn = BERTClass(N_CLASSES).to('mps')
 
 n_comm = np.zeros((N_MC, len(policies), N_rounds))
@@ -57,7 +66,10 @@ succ_rates = np.zeros((O,U))
 oracle_state_occurences = np.zeros((O,U))
 evaluations = np.zeros((N_MC, len(policies), N_rounds))
 eavesdropper_evaluations = np.zeros((N_MC, len(policies), N_rounds))
-eavesdropper_client = Client(0,BERTClass(N_CLASSES))
+
+create_datasets_clients(N_device=35,fraction_of_data=1,batch_size = 600, create_eavesdropper = True)
+eavesdropper_client = Client(1000,BERTClass(N_CLASSES))
+eavesdropper_client_valid = Client(2000,BERTClass(N_CLASSES))
 RUN_EXP = 1
 if RUN_EXP:
     for mc in tqdm.tqdm(range(N_MC)):
@@ -87,12 +99,14 @@ if RUN_EXP:
                     incentive = I-1
                     action = type_query*I + incentive
                 
+
                 
                 if type_query == 0:
                     learner_states[mc,policy_idx,round_] = learner_state
-                else:
-                    succ_round,evaluation = oracle.train(incentive,learner_parameters)
+                    #eavesdropper_client.train(400)
                     
+                else:
+                    succ_round,evaluation = oracle.train(incentive,learner_parameters,return_only_succ = True)
                     
                     succ_rates[int(oracle_state),int(action)] += succ_round
                     oracle_state_occurences[int(oracle_state),int(action)] += 1
@@ -105,13 +119,16 @@ if RUN_EXP:
                         
                 evaluations[mc,policy_idx,round_] = evaluation
                 eavesdropper_estimate = update_estimate(eavesdropper_estimate,action,In)
+                
+                
                 if eavesdropper_estimate >0.5:
                     eavesdropper_evaluation = 0
                 else:
-                    eavesdropper_evaluation = eavesdropper_client.evaluate(700)
-
+                    eavesdropper_client_valid.set_parameters(eavesdropper_client.get_parameters())
+                    #eavesdropper_evaluation = eavesdropper_client_valid.evaluate(400)
+                eavesdropper_evaluations[mc,policy_idx,round_] = eavesdropper_evaluation
                 eavesdropper_estimates[mc,policy_idx, round_] = eavesdropper_estimate
-                print(evaluation,eavesdropper_evaluation)
+                print(eavesdropper_estimate,evaluation,eavesdropper_evaluation)
                 In = In + incentive + 1 ### Total Incentive update
 
                 oracle.update_client_participation()
@@ -129,7 +146,7 @@ if RUN_EXP:
     np.save('parameters/eavesdropper_estimates.npy', eavesdropper_estimates)
     np.save('parameters/learner_state_final.npy', learner_states)
     np.save('parameters/oracle_states.npy', oracle_states)
-    np.save('parameters/evaluation_extra.npy', evaluations)
+    #np.save('parameters/evaluation.npy', evaluations)
     np.save('parameters/eavesdropper_evaluations.npy', eavesdropper_evaluations)
 
 eavesdropper_evaluation = np.load('parameters/eavesdropper_evaluations.npy')
@@ -140,7 +157,7 @@ learner_state_final = np.load('./parameters/learner_state_final.npy')
 oracle_states = np.load('./parameters/oracle_states.npy')
 evaluations = np.load('./parameters/evaluation.npy')
 print(evaluations)
-print(eavesdropper_estimates)
+print(eavesdropper_evaluations)
 
 print(oracle_state_occurences.sum(axis=1))
 print(succ_rates/oracle_state_occurences)
@@ -163,15 +180,6 @@ plt.legend()
 plt.savefig('plots/n_comm.png')
 plt.close()
 
-plt.figure()
-plt.plot(successful_queries[0],label = 'SA')
-plt.plot(successful_queries[1],label = 'Random')
-plt.plot(successful_queries[2],label = 'Greedy')
-plt.xlabel('Round')
-plt.ylabel('Success rate')
-plt.legend()
-plt.savefig('plots/successful_queries.png')
-plt.close()
 
 plt.figure()
 plt.plot(eavesdropper_estimates[0],label = 'SA')
@@ -183,18 +191,3 @@ plt.legend()
 plt.savefig('plots/eavesdropper_estimates.png')
 plt.close()
  
-plt.figure()
-plt.plot(learner_state_final[0],label = 'SA')
-plt.plot(learner_state_final[1],label = 'Random')
-plt.plot(learner_state_final[2],label = 'Greedy')
-plt.xlabel('Round')
-plt.ylabel('Learner state')
-plt.legend()
-plt.savefig('plots/learner_state_final.png')
-
-plt.figure()
-plt.hist(oracle_states.flatten())
-plt.xlabel('Round')
-plt.ylabel('Gradient state')
-plt.legend()
-plt.savefig('plots/oracle_states.png')

@@ -18,9 +18,9 @@ class Oracle():
         self.initial_prob = self.initial_probs[np.random.choice([0,1,2])]
         self.participation_client  = np.random.choice([0,1],self.n_clients, p=self.initial_prob)
         self.n_participating_clients = sum(self.participation_client)
-        create_datasets_clients(N_device=self.n_clients,fraction_of_data=1,batch_size = self.client_dataset_size)
+       # create_datasets_clients(N_device=self.n_clients,fraction_of_data=1,batch_size = self.client_dataset_size)
         self.agg_parameters = BERTClass(N_CLASSES).to("mps").state_dict()
-        self.initialize_clients()
+       # self.initialize_clients()
         self.update_oracle_state()
     def initialize_clients(self):
         self.clients = []
@@ -28,13 +28,14 @@ class Oracle():
             self.clients.append(Client(client,BERTClass(N_CLASSES)))
 
        
-    def train(self,incentive,parameters):
+    def train(self,incentive,parameters,return_only_succ = False):
         incentive_map = [0.2,0.4,0.9]
         evaluation = 0
         data_available_for_sampling = incentive_map[int(incentive)]*self.client_dataset_size
         self.total_data = np.random.uniform(data_available_for_sampling,data_available_for_sampling,self.n_participating_clients).sum()
         round_succ = self.total_data > self.data_thresholds
-        
+        if return_only_succ:
+            return round_succ,0
         if round_succ:
             ### Train loop 
             self.zero_aggregated_parameters()

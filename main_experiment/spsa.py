@@ -138,11 +138,11 @@ def approximate_finite_horizon_cost(N,N_MC,O,M,U,policy,update_estimate,get_cost
 
 TRAIN_SPSA = True
 N_iter = 1000
-delta = 2
-N_MC = 100
+delta = 1
+N_MC = 40
 tau = 0.2
 parameters = np.ones((O,U))*25
-step_size = 0.05
+step_size = 0.1
 if TRAIN_SPSA:
     for iter_ in range(N_iter):
         parameters_change = np.random.choice([0,1],size = (O,U),p = [0.5,0.5])
@@ -154,9 +154,10 @@ if TRAIN_SPSA:
         gradient[parameters_change == 1] = (costs_plus - costs_minus)/(2*delta)
         parameters = parameters - step_size*gradient
 
-        tau = tau*0.99
-        delta = delta*0.99
-        step_size = step_size*0.99
+        tau = tau*0.995
+        delta = delta*0.999
+        step_size = step_size*0.999
 
         print(parameters,costs_plus)
 
+    np.save("parameters/spsa_parameters")

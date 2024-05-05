@@ -52,7 +52,7 @@ def get_cost(oracle_state,learner_state,action):
     [
         -0.1,0
     ]])
-    return C[int(oracle_state),int(action)]/((learner_state+1)**(1.4))
+    return C[int(oracle_state),int(action)]/((learner_state+1)**(0.5))
 for o in range(O):
     for m in range(M):
         for a in range(A):
