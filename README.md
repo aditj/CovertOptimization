@@ -1,4 +1,4 @@
-### Code for Covert Optimization using Structured Reinforcement Learning
+### Code for "Structured Reinforcement Learning for Incentivized Stochastic Covert Optimization"
 
 #### Directory Structure
 The repository is organized as follows:
