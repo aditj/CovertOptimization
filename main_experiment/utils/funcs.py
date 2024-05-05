@@ -26,3 +26,13 @@ def update_estimate(currentest,u,In,I=3):
     else:
         currentest_eav = (currentest*In + incentive+1)/(In+incentive+1)
     return currentest_eav
+def plot_sigmoid_policy(sa_parameters,M=50,O=3,U=6):
+    policy = np.zeros((M*O))
+    for m in range(M):
+        for o in range(O):
+            policy[o*M+m] = sigmoid_policy(m+M*o,sa_parameters)
+    plt.figure()
+    plt.plot(policy)
+    plt.xlabel('State')
+    plt.ylabel('Action')
+    plt.savefig('plots/sigmoid_policy.png')
