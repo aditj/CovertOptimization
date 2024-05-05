@@ -13,7 +13,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
-
+### Class for custom dataloader
 class CustomDataset(Dataset):
 
     def __init__(self, dataframe, tokenizer, max_len):
@@ -54,18 +54,21 @@ class CustomDataset(Dataset):
         }
 ## Class for FL client 
 class Client():
+    ''' 
+    Client class for Federated Learning
+    '''
     def __init__(self,cid,network,train_batch_size = 16,valid_batch_size = 80,max_len = 300,epochs = 1,learning_rate = 1e-04,device = "mps",n_classes = 2):
-        self.cid = cid
-        self.train_batch_size = train_batch_size
-        self.valid_batch_size = valid_batch_size
-        self.epochs = epochs
-        self.learning_rate = learning_rate
-        self.device = device
-        self.max_len = max_len
-        self.n_classes = n_classes 
-        self.load_data()
-        self.model = network
-        self.model.to(self.device)
+        self.cid = cid ## client id
+        self.train_batch_size = train_batch_size ## train batch size
+        self.valid_batch_size = valid_batch_size ## valid batch size
+        self.epochs = epochs ## number of epochs
+        self.learning_rate = learning_rate ## learning rate
+        self.device = device ## device
+        self.max_len = max_len ## max length parameter (of tokenizer)
+        self.n_classes = n_classes  ## number of classes
+        self.load_data() ## load data
+        self.model = network ## model
+        self.model.to(self.device)  ## send model to device
        
         print("Client", self.cid, "initialized with ",len(self.train_dataset),"train samples and ",len(self.valid_dataset),"valid samples")
 

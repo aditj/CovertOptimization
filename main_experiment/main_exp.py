@@ -31,8 +31,8 @@ sa_parameters = np.load("parameters/spsa_parameters.npy")
 #     [15,15,15,15,15,15],
 #     [0,0,0,0,40,50]
 # ])
-sa_parameters_constant_incentivation = np.load("parameters/spsa_parameters_constant_incentivation.npy")
-# np.array([
+sa_parameters_constant_incentivation = np.load("parameters/spsa_parameters_constant_incentivization.npy")
+# np.array([ ### toy parameters
 #     [50,50,50,50,50,50],
 #     [15,15,15,15,15,15],
 #     [0,0,0,0,0,0]

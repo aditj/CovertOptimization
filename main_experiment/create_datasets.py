@@ -4,7 +4,13 @@ import pandas as pd
 import numpy as np
 ## Function to create datasets
 def create_datasets_clients(N_device = 100, fraction_of_data = 1,batch_size = 40, create_eavesdropper = False):
-
+    '''
+    Function to create datasets for N clients and an eavesdropper
+    N_device: Number of clients
+    fraction_of_data: Fraction of data to be used
+    batch_size: Batch size for training
+    create_eavesdropper: Boolean to create eavesdropper dataset
+    '''
     df = pd.read_csv("./data/df_treated_comment.csv")
 
 ##    df = df.sample(frac=fraction_of_data).reset_index(drop=True)
@@ -43,8 +49,9 @@ def create_datasets_clients(N_device = 100, fraction_of_data = 1,batch_size = 40
         df_eav_1 = df[df['list'].apply(lambda x: 1 in x)].sample(frac=0.01)
         df_eav_0 = df[df['list'].apply(lambda x: 0 in x)].sample(frac=0.99)
         df_eav = pd.concat([df_eav_1,df_eav_0])
-        
+        ### Train Dataset
         train_df_eav = df_eav.sample(n = int(N_batch*0.8))
+        ### Validation Dataset
         valid_df_eav = df.drop(train_df_eav.index).reset_index(drop=True)
         valid_df_eav_1 = valid_df_eav[valid_df_eav['list'].apply(lambda x: 1 in x)].sample(frac=0.5)
         valid_df_eav_0 = valid_df_eav[valid_df_eav['list'].apply(lambda x: 0 in x)].sample(frac=0.5)

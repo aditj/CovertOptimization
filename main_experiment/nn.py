@@ -6,7 +6,7 @@ import torch.nn as nn
 logging.set_verbosity_error()
 
 
-
+#### BERT Model based neural network classifier
 class BERTClass(torch.nn.Module):
     def __init__(self,n_classes = 6):
         super(BERTClass, self).__init__()
