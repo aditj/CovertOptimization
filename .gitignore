@@ -5,3 +5,4 @@ __pycache__/*
 ./data/*
 ./data/*.csv
 ./parameters/*
+.DS_Store
