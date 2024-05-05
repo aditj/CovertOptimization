@@ -13,7 +13,7 @@ The code is written in Python 3.7. The required libraries are:
 - sklearn
 - tqdm
 - matplotlib
-
+- pymdptoolbox (for the bandit benchmark experiment, specifically the backward induction algorithm)
 Initialize the following folders: 
 - ```data/```: Directory to store the raw, cleaned, and client datasets
 - - ```client_datasets/```
