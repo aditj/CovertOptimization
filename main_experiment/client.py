@@ -1,3 +1,4 @@
+## Importing required libraries
 import numpy as np
 from sklearn import metrics
 import torch
@@ -8,7 +9,7 @@ from transformers import AlbertTokenizer, BertTokenizer
 import pandas as pd
 tokenizer = BertTokenizer.from_pretrained('google/bert_uncased_L-2_H-128_A-2', do_lower_case=True)
 from torch.utils.data import Dataset, DataLoader
-### suppress ptorch transformer warnings
+### suppress transformer warnings
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -73,6 +74,9 @@ class Client():
         print("Client", self.cid, "initialized with ",len(self.train_dataset),"train samples and ",len(self.valid_dataset),"valid samples")
 
     def load_data(self):
+        '''
+        Function to load data
+        '''
         df = pd.read_csv(f'data/client_datasets/client_{self.cid}.csv')
         df['list'] = df['list'].apply(lambda x: x.strip('][').split(','))
         df['list'] = df['list'].apply(lambda x: [float(i) for i in x])
@@ -115,7 +119,9 @@ class Client():
                 optimizer.step()
             #print(f'Client: {self.cid}, Batch: {_}, Loss:  {loss.item()}')
     def evaluate(self,batch_size):
-        
+        '''
+        Function to evaluate the model
+        '''
         self.model.eval()
         fin_targets=[]
         fin_outputs=[]

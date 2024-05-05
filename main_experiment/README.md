@@ -16,8 +16,9 @@ The dataset used in the experiment is the Hatespeech dataset from Kaggle. The da
 ##### Instructions to run the code
 1. Download the dataset from the link provided above and store it in the data folder
 2. Run the ```clean_datasets.py``` file to preprocess the dataset
-3. Set the parameters in the ```main_exp.py``` file and run the file to start the experiment. The parameters are described in the file.
-4. The results will be printed on the terminal. 
+3. Run the ```spsa.py``` file to get the optimal parameters for policy with appropriate hyperparameters
+4. Set the parameters in the ```main_exp.py``` file and run the file to start the experiment. The parameters are described in the file.
+5. The results will be printed on the terminal. 
 
 
 
